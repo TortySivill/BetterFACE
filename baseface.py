@@ -243,7 +243,7 @@ class BaseFACE:
 
     def plot(
         self,
-        path: list=None
+        path: list = None
     ):
         """Plots all nodes and edges in the graph, optionally highlighting a path.
 
