@@ -1,47 +1,50 @@
 
 
-def basic_rules(feature, value_from, value_to):
+def basic_rules(features, point_from, point_to):
     """
 
     Args:
-        feature: feature name
-        value_from: feature value of start point
-        value_to: feature value of end point
+        features: list of feature name
+        point_from: numpy array
+        point_to: numpy array
 
     Returns: Binary 1 is transition if permissible, 0 if not
 
     """
-    if feature == 'age':
-        return 0 if value_to < value_from else 1
-    elif feature == 'education':
-        return 0 if value_to < value_from or value_to - value_from > 1 else 1
-    elif feature == 'sex':
-        return 0 if value_from != value_to else 1
-    elif feature == 'weekly-hours':
-        return 0 if value_to - value_from > 5 else 1
-    elif 'race' in feature:
-        return 0 if value_from != value_to else 1
-    else:
-        return 1
+    for i, feature in enumerate(features):
+        if feature == 'age':
+            return 0 if point_to[i] < point_from[i] else 1
+        elif feature == 'education':
+            return 0 if point_to[i] < point_from[i] or point_to[i] - point_from[i] > 1 else 1
+        elif feature == 'sex':
+            return 0 if point_from[i] != point_to[i] else 1
+        elif feature == 'weekly-hours':
+            return 0 if point_to[i] - point_from[i] > 5 else 1
+        elif 'race' in feature:
+            return 0 if point_from[i] != point_to[i] else 1
+        else:
+            return 1
 
-def tom_test_rules(feature, value_from, value_to):
+
+def tom_test_rules(features, point_from, point_to):
     """
 
     Args:
-        feature: feature name
-        value_from: feature value of start point
-        value_to: feature value of end point
+        features: list of feature name
+        point_from: numpy array
+        point_to: numpy array
 
     Returns: Binary 1 is transition if permissible, 0 if not
 
     """
-    if feature == 'age':
-        return 0 if value_to < value_from else 1
-    elif feature == 'education':
-        return 0 if value_to < value_from or value_to - value_from > 1 else 1
-    elif feature in {'sex', 'race'}:
-        return 0 if value_from != value_to else 1
-    elif feature == 'weekly-hours':
-        return 0 if value_to - value_from > 1 else 1
-    else:
-        return 1
+    for i, feature in enumerate(features):
+        if feature == 'age':
+            return 0 if point_to[i] < point_from[i] else 1
+        elif feature == 'education':
+            return 0 if point_to[i] < point_from[i] or point_to[i] - point_from[i] > 1 else 1
+        elif feature in {'sex', 'race'}:
+            return 0 if point_from[i] != point_to[i] else 1
+        elif feature == 'weekly-hours':
+            return 0 if point_to[i] - point_from[i] > 1 else 1
+        else:
+            return 1

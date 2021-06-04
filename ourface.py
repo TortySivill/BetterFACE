@@ -1,10 +1,8 @@
-from scipy.spatial.distance import cdist
 from collections.abc import Callable
 from baseface import BaseFACE
 import numpy as np
 import pandas as pd
 import logging
-from tqdm import tqdm
 
 
 class OurFACE(BaseFACE):
@@ -43,14 +41,13 @@ class OurFACE(BaseFACE):
             binary matrix of size len(XA) * len(XB)
         """
         logging.info(' Creating permission matrix from rule base')
+        features = list(XA)
+        XA = XA.values
+        XB = XB.values
         permission_matrix = np.ones((len(XA), len(XB)), dtype=bool)
-        for i, node_from in tqdm(enumerate(XA.index)):
-            for j, node_to in enumerate(XB.index):
-                if node_from != node_to:
-                    permissions = []
-                    for feature in XA.loc[node_from].index:
-                        permissions.append(self.rule_base(feature, XA.loc[node_from][feature], XB.loc[node_to][feature]))
-                    permission_matrix[i, j] = np.logical_not(np.any(np.array(permissions) == 0)).astype(int)
+        for i in range(len(XA)):
+            for j in range(len(XB)):
+                permission_matrix[i, j] = self.rule_base(features, XA[i], XB[j])
         return permission_matrix
 
     def _weight_function(
