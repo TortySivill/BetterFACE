@@ -69,8 +69,4 @@ class OurFACE(BaseFACE):
         Returns:
             weight between points
         """
-        print(XA.values.shape, XB.values.shape)
         return self.dist_func(XA.values, XB.values, threshold_matrix, placeholder=np.inf)
-
-        # with np.errstate(divide='ignore'):
-            # return cdist(XA.values, XB.values, metric='euclidean') / threshold_matrix
