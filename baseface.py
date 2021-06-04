@@ -86,7 +86,7 @@ class BaseFACE:
         unconnected_nodes = [node for node, deg in self.G.degree if deg == 0]
         self.G.remove_nodes_from(unconnected_nodes)
         if len(unconnected_nodes) > 0:
-            logging.info(f' {len(unconnected_nodes)} nodes removed as unconnected. Graph now has {len(self.G.nodes)}')
+            logging.info(f' {len(unconnected_nodes)} nodes removed as unconnected. Graph now has {len(self.G.nodes)} nodes.')
 
     def prune_edges(self):
         """Method to remove edges that do not meet a threshold
@@ -221,7 +221,7 @@ class BaseFACE:
 
     def plot_path(
             self,
-            path: list[int]
+            path: list#[int] # NOTE: This kind of type hinting doesn't work in Python 3.6.9.
     ):
         """Plots the subgraph of nodes that are connected to the instance and shows the path to the CE
 
@@ -240,3 +240,34 @@ class BaseFACE:
         path_edges = list(zip(path[:-1], path[1:]))
         nx.draw_networkx_edges(subG, pos=pos, edgelist=path_edges, edge_color='r', width=3)
         fig.show()
+
+    def plot(
+        self,
+        path: list=None
+    ):
+        """Plots all nodes and edges in the graph, optionally highlighting a path.
+
+        Args:
+            path: Optional list of nodes.
+
+        Returns:
+
+        """
+        plt.figure(figsize=(12, 12))
+        pos = nx.drawing.nx_agraph.graphviz_layout(self.G, prog="neato")
+        nx.draw_networkx(self.G, 
+            pos=pos,
+            node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in self.G.nodes], # NOTE: Only works with binary classification.    
+            linewidths=2,
+            connectionstyle="arc3,rad=0.1"if self.bidirectional else None) # Curved edges if bidirectional.
+        # If path specified, highlight it in a different colour.
+        if path is not None:
+            path_edges = set(zip(path[:-1], path[1:]))
+            invalid_edges = path_edges - self.G.edges
+            assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
+            nx.draw_networkx_edges(self.G, 
+                pos=pos, 
+                edgelist=path_edges, 
+                edge_color="r", 
+                width=3,
+                connectionstyle="arc3,rad=0.1"if self.bidirectional else None)

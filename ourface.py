@@ -13,10 +13,12 @@ class OurFACE(BaseFACE):
             self,
             data: pd.DataFrame,
             clf,
-            rule_base: Callable[[str, float, float], bool],
+            dist_func,
+            rule_base: Callable,#[[str, float, float], bool], # NOTE: This kind of type hinting doesn't work in Python 3.6.9.
             pred_threshold: float = None,
             bidirectional: bool = True,
             dist_threshold: float = 1):
+        self.dist_func = dist_func
         self.rule_base = rule_base
         super().__init__(
             data,
@@ -41,7 +43,7 @@ class OurFACE(BaseFACE):
             binary matrix of size len(XA) * len(XB)
         """
         logging.info(' Creating permission matrix from rule base')
-        permission_matrix = np.ones((len(XA), len(XB)))
+        permission_matrix = np.ones((len(XA), len(XB)), dtype=bool)
         for i, node_from in tqdm(enumerate(XA.index)):
             for j, node_to in enumerate(XB.index):
                 if node_from != node_to:
@@ -67,6 +69,7 @@ class OurFACE(BaseFACE):
         Returns:
             weight between points
         """
-        # TODO: add UDM
-        with np.errstate(divide='ignore'):
-            return cdist(XA.values, XB.values, metric='euclidean') / threshold_matrix
+        return self.dist_func(XA.values, XB.values, threshold_matrix, placeholder=np.inf)
+
+        # with np.errstate(divide='ignore'):
+            # return cdist(XA.values, XB.values, metric='euclidean') / threshold_matrix
