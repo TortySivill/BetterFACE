@@ -37,7 +37,7 @@ def tom_test_rules(features, point_from, point_to):
     Returns: Binary 1 is transition if permissible, 0 if not
 
     """
-    # ['age', 'employment-type', 'education-num', 'occupation', 'race', 'sex', 'weekly-hours']
+    # ["age","employment-type","education-num","occupation","race","sex","weekly-hours"]
 
     if point_to[0] < point_from[0] or point_to[0] - point_from[0] > 1: return 0 # Age
     if point_from[1] != point_to[1]: return 0 # Employment type
