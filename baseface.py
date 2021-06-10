@@ -244,7 +244,8 @@ class BaseFACE:
 
     def show(
         self,
-        path: list = None
+        path: list = None,
+        edge_labels = False
     ):
         """Plots all nodes and edges in the graph, optionally highlighting a path.
 
@@ -261,11 +262,12 @@ class BaseFACE:
             node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in self.G.nodes], # NOTE: Only works with binary classification.    
             linewidths=2,
             connectionstyle="arc3,rad=0.1"if self.bidirectional else None) # Curved edges if bidirectional.
-        nx.draw_networkx_edge_labels(self.G,
-            pos=pos,
-            label_pos=0.4,
-            font_size=6,
-            edge_labels=dict([((i, j), f"{d['weight']:.2f}") for i, j, d in self.G.edges(data=True)]))
+        if edge_labels:
+            nx.draw_networkx_edge_labels(self.G,
+                pos=pos,
+                label_pos=0.4,
+                font_size=6,
+                edge_labels=dict([((i, j), f"{d['weight']:.2f}") for i, j, d in self.G.edges(data=True)]))
         # If path specified, highlight it in a different colour.
         if path is not None:
             path_edges = set(zip(path[:-1], path[1:]))
