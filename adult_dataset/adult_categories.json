@@ -1,55 +1,55 @@
 {
-    "education-num": [
-        "Preschool",
-        "1st-4th",
-        "5th-6th",
-        "7th-8th",
-        "9th",
-        "10th",
-        "11th",
-        "12th",
-        "HS-grad",
-        "Some-college",
-        "Assoc-voc",
-        "Assoc-acdm",
-        "Bachelors",
-        "Masters",
-        "Prof-school",
-        "Doctorate"
-    ],
-    "sex": [
-        "Female",
-        "Male"
-    ],
-    "compensation": [
-        "<=50K",
-        ">50K"
-    ],
-    "employment-type": [
-        "Government",
-        "Privately-Employed",
-        "Self-Employed"
-    ],
-    "occupation": [
-        "Adm-clerical",
-        "Craft-repair",
-        "Exec-managerial",
-        "Farming-fishing",
-        "Handlers-cleaners",
-        "Machine-op-inspct",
-        "Other-service",
-        "Priv-house-serv",
-        "Prof-specialty",
-        "Protective-serv",
-        "Sales",
-        "Tech-support",
-        "Transport-moving"
-    ],
-    "race": [
-        "Amer-Indian-Eskimo",
-        "Asian-Pac-Islander",
-        "Black",
-        "Other",
-        "White"
-    ]
+    "education-num": {
+        "0": "Preschool",
+        "1": "1st-4th",
+        "2": "5th-6th",
+        "3": "7th-8th",
+        "4": "9th",
+        "5": "10th",
+        "6": "11th",
+        "7": "12th",
+        "8": "HS-grad",
+        "9": "Some-college",
+        "10": "Assoc-voc",
+        "11": "Assoc-acdm",
+        "12": "Bachelors",
+        "13": "Masters",
+        "14": "Prof-school",
+        "15": "Doctorate"
+    },
+    "sex": {
+        "0": "Female",
+        "1": "Male"
+    },
+    "compensation": {
+        "0": "<=50K",
+        "1": ">50K"
+    },
+    "employment-type": {
+        "0": "Government",
+        "1": "Privately-Employed",
+        "2": "Self-Employed"
+    },
+    "occupation": {
+        "0": "Adm-clerical",
+        "1": "Craft-repair",
+        "2": "Exec-managerial",
+        "3": "Farming-fishing",
+        "4": "Handlers-cleaners",
+        "5": "Machine-op-inspct",
+        "6": "Other-service",
+        "7": "Priv-house-serv",
+        "8": "Prof-specialty",
+        "9": "Protective-serv",
+        "10": "Sales",
+        "11": "Tech-support",
+        "12": "Transport-moving"
+    },
+    "race": {
+        "0": "Amer-Indian-Eskimo",
+        "1": "Asian-Pac-Islander",
+        "2": "Black",
+        "3": "Other",
+        "4": "White"
+    }
 }

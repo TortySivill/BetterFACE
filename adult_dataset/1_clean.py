@@ -47,7 +47,7 @@ a = a.rename(columns={'hours-per-week':'weekly-hours'})
 a["education-num"] = a["education-num"] - 1
 cat = a.groupby(['education','education-num']).size().reset_index().rename(columns={0:'count'}).sort_values(by='education-num')
 print(cat)
-categories["education-num"] = list(cat["education"])
+categories["education-num"] = {i: c for i, c in enumerate(cat["education"])}
 print(categories["education-num"])
 
 # Convert categorical columns to numerical labels (NOTE: this results in alphanumeric order).
@@ -57,7 +57,7 @@ for var in ['sex', 'compensation', 'employment-type', 'occupation', 'race']:
        a[var] = a[var].cat.codes
        cat = a[[var,f'{var} raw','idx']].groupby([var, f'{var} raw']).count().rename(columns={'idx':'count'}).reset_index(drop=False)
        print(cat)
-       categories[var] = list(cat[f'{var} raw'])
+       categories[var] = {i: c for i, c in enumerate(cat[f'{var} raw'])}
        print(categories[var])
 
 # Remove redundant columns.
