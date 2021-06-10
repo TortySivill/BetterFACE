@@ -119,33 +119,19 @@ class BaseFACE:
             self.G.add_node(new_node)
             logging.info(f' 1 node has been added to graph. Graph now has {len(self.G.nodes())} nodes.')
 
-        if new_node is None:
-            XA = self.data.loc[list(self.G.nodes)]
-            XB = self.data.loc[list(self.G.nodes)]
-        else:
-            XA = self.data.loc[list(self.G.nodes)]
-            XB = pd.DataFrame(self.data.loc[list(self.G.nodes)].iloc[-1]).T
+        XA = self.data.loc[list(self.G.nodes)]
+        if new_node is None: XB = XA
+        else: XB = pd.DataFrame(XA.iloc[-1]).T
+
+        node_nums_A, node_nums_B = list(XA.index), list(XB.index)
 
         threshold_matrix = self._threshold_function(XA, XB)
-        weight_matrix = pd.DataFrame(self._weight_function(XA, XB, threshold_matrix), index=XA.index, columns=XB.index)
+        weight_matrix = self._weight_function(XA, XB, threshold_matrix)
+        edge_weights = [(node_nums_A[a], node_nums_B[b], weight_matrix[a,b])
+                        for a in range(weight_matrix.shape[0]) for b in range(weight_matrix.shape[1])
+                        if not(np.isinf(weight_matrix[a,b]))]
 
-        edge_weights = []
-        for node_from in weight_matrix.index:
-            for node_to in weight_matrix.columns:
-                if node_from != node_to:
-                    weight = weight_matrix.loc[node_from][node_to]
-                    if np.isinf(weight).item() is False:
-                        edge_weights.append((node_from, node_to, {'weight': weight}))
-
-        if self.bidirectional is True and new_node is not None:
-            for node_from in weight_matrix.columns:
-                for node_to in weight_matrix.index:
-                    if node_from != node_to:
-                        weight = weight_matrix.loc[node_from][node_to]
-                        if np.isinf(weight).item() is False:
-                            edge_weights.append((node_from, node_to, {'weight': weight}))
-
-        self.G.add_edges_from(edge_weights)
+        self.G.add_weighted_edges_from(edge_weights)
         logging.info(f' {len(edge_weights)} edges have been added to graph.')
         self.prune_edges()
         self.prune_nodes()

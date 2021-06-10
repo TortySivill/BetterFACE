@@ -44,10 +44,11 @@ class OurFACE(BaseFACE):
         features = list(XA)
         XA = XA.values
         XB = XB.values
-        permission_matrix = np.ones((len(XA), len(XB)), dtype=bool)
+        permission_matrix = np.zeros((len(XA), len(XB)), dtype=bool)
         for i in range(len(XA)):
             for j in range(len(XB)):
-                permission_matrix[i, j] = self.rule_base(features, XA[i], XB[j])
+                if i != j: # No "self-loop" edges.
+                    permission_matrix[i, j] = self.rule_base(features, XA[i], XB[j])
         return permission_matrix
 
     def _weight_function(
