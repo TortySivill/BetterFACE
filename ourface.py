@@ -40,7 +40,7 @@ class OurFACE(BaseFACE):
         Returns:
             binary matrix of size len(XA) * len(XB)
         """
-        logging.info(' Creating permission matrix from rule base')
+        logging.info(' Creating permission matrix from rule base.')
         features = list(XA)
         XA = XA.values
         XB = XB.values

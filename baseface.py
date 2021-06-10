@@ -3,6 +3,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from scipy.spatial.distance import cdist
 import networkx as nx
+from typing import Union
 import logging
 import importlib as imp
 imp.reload(logging)
@@ -29,7 +30,7 @@ class BaseFACE:
     ):
         self.data = data
         self.clf = clf
-        self.prediction = pd.DataFrame(self.clf.predict(data).astype(int), columns=['prediction'], index=data.index)
+        self.prediction = pd.DataFrame(self.clf.predict(data).astype(int), columns=["prediction"], index=data.index)
         self.pred_threshold = pred_threshold
         self.bidirectional = bidirectional
         self.dist_threshold = dist_threshold
@@ -138,13 +139,13 @@ class BaseFACE:
 
     def generate_counterfactual(
             self,
-            instance: np.ndarray,
+            instance: Union[int, np.ndarray],
             target_class: int = None
     ) -> (pd.DataFrame, pd.DataFrame):
         """Generates counterfactual to flip prediction of example using dijkstra shortest path for the graph created
 
         Args:
-            instance: instance to generate CE
+            instance: instance to generate CE, specified either as an int (index in existing data array) or np.array (new data point)
             target_class: target class for CE, if none then opposite class for binary classification
 
         Returns:
@@ -152,58 +153,72 @@ class BaseFACE:
             probability of CE (if prediction_prob specified)
 
         """
-        logging.info(f' Generating counterfactual for instance {instance} using {self.__class__}.')
-        instance = instance.reshape(1, -1)
-        assert target_class != self.clf.predict(instance), "Target class is the same as the current prediction."
-
-        example_in_data = self.data[self.data.eq(instance)].dropna()
-        if len(example_in_data) > 0:
-            start_node = example_in_data.iloc[0].name
+        if type(instance) == int:
+            assert instance in self.data.index, "Invalid instance index."
+            start_node = instance
+            pred = self.prediction.iloc[instance]["prediction"]
+            instance = self.data.iloc[instance].values
         else:
             start_node = list(self.G.nodes)[-1] + 1
             self.data = self.data.append(pd.Series(instance.squeeze(), index=list(self.data), name=start_node))
-            self.prediction = self.prediction.append(pd.Series(self.clf.predict(instance).astype(int),
-                                                               index=list(self.prediction), name=start_node))
+            pred = self.clf.predict(instance.reshape(1,-1))[0].astype(int)
+            self.prediction = self.prediction.append(pd.Series(pred, index=list(self.prediction), name=start_node))  
+            raise NotImplementedError("UDM implementation currently cannot handle new instance addition.")          
             self.add_nodes_and_edges(start_node)
 
+        # assert target_class != pred, "Target class is the same as the current prediction."
         assert start_node in list(self.G.nodes), "Instance does not meet thresholds."
-        # TODO: node_connected_component does not work for directed graph find work around
-        self.connected_nodes = list(nx.node_connected_component(self.G, start_node))
 
-        if target_class is None:
-            target_class = np.logical_not(self.clf.predict(instance)).astype(int)
-        target_nodes = self.data.loc[self.connected_nodes][(self.prediction.loc[self.connected_nodes] == target_class)
-                                                            .values].index
+        if target_class is None: target_class = np.logical_not(pred).astype(int) # NOTE: Only works with binary classification!
+        
+        logging.info(f' Generating counterfactual for instance {instance} using {self.__class__}. Fact prediction = {pred}, foil = {target_class}.')
+
+        # # TODO: node_connected_component does not work for directed graph find work around
+        # self.connected_nodes = list(nx.node_connected_component(self.G, start_node))
+
+        # target_nodes = self.data.loc[self.connected_nodes][(self.prediction.loc[self.connected_nodes] == target_class)
+        #                                                     .values].index
+
+        target_nodes = self.prediction.index[self.prediction["prediction"] == target_class]
 
         assert len(target_nodes) > 0, "No target nodes that meet thresholds."
-        logging.info(f' {len(target_nodes)} potential counterfactuals.')
+        logging.info(f' {len(target_nodes)} target nodes found.')
 
-        lengths = np.zeros(len(target_nodes))
-        paths = []
-        for i, target_node in enumerate(target_nodes):
-            length, path = nx.single_source_dijkstra(self.G, start_node, target_node)
-            lengths[i] = length
-            paths.append(path)
-        sort_shortest = lengths.argsort()
+        # NOTE: Running single_source_dijkstra once without specifying a target node is usually faster
+        # than running it many times with different targets, because it avoids repeated computation.
+        costs, paths = nx.single_source_dijkstra(self.G, start_node)
+        paths_and_costs = [(paths[n], costs[n]) for n in target_nodes if n in costs]
+        logging.info(f" {len(paths_and_costs)} permissible paths found.")
+        if len(paths_and_costs) == 0: return None, None
+
+        paths_and_costs.sort(key=lambda x:x[1]) # Sort by ascending cost.
 
         i = 0
         if self.pred_threshold is not None:
-            pred_probs = self.clf.predict_proba(self.data.loc[paths[sort_shortest[0]][-1]].values.reshape(1, -1))\
+            pred_probs = self.clf.predict_proba(self.data.loc[paths_and_costs[i][0][-1]].values.reshape(1, -1))\
                 .squeeze()[target_class]
             while pred_probs[-1] < self.pred_threshold:
-                assert i < len(target_nodes), "Prediction threshold not met."
-                pred_probs = self.clf.predict_proba(self.data.loc[paths[sort_shortest[i]][-1]].values.reshape(1, -1))\
-                    .squeeze()[target_class]
                 i += 1
+                assert i < len(target_nodes), "Prediction threshold not met."
+                pred_probs = self.clf.predict_proba(self.data.loc[paths_and_costs[i][0][-1]].values.reshape(1, -1))\
+                    .squeeze()[target_class]
+                
+        best_path_df = self.path_df(paths_and_costs[i][0], include_probs=(self.pred_threshold is not None))
 
-        path_df = self.data.loc[paths[sort_shortest[i-1]]]
-        pred_df = self.prediction.loc[paths[sort_shortest[i-1]]]
+        return paths_and_costs, best_path_df
 
-        if self.pred_threshold is not None:
-            prob = np.take_along_axis(self.clf.predict_proba(path_df), pred_df.values, axis=1)
-            pred_df['probability'] = prob
-
-        return path_df, pred_df
+    def path_df(
+        self, 
+        path,
+        include_probs=False
+    ):
+        data = self.data.loc[path]
+        df = data
+        df["prediction"] = self.prediction.loc[path]["prediction"]
+        if include_probs:
+            # NOTE: What is take_along_axis doing for us here?
+            df["probability"] = np.take_along_axis(self.clf.predict_proba(data), df["prediction"].values, axis=0)
+        return df
 
     def plot_path(
             self,
@@ -227,7 +242,7 @@ class BaseFACE:
         nx.draw_networkx_edges(subG, pos=pos, edgelist=path_edges, edge_color='r', width=3)
         fig.show()
 
-    def plot(
+    def show(
         self,
         path: list = None
     ):
@@ -246,6 +261,11 @@ class BaseFACE:
             node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in self.G.nodes], # NOTE: Only works with binary classification.    
             linewidths=2,
             connectionstyle="arc3,rad=0.1"if self.bidirectional else None) # Curved edges if bidirectional.
+        nx.draw_networkx_edge_labels(self.G,
+            pos=pos,
+            label_pos=0.4,
+            font_size=6,
+            edge_labels=dict([((i, j), f"{d['weight']:.2f}") for i, j, d in self.G.edges(data=True)]))
         # If path specified, highlight it in a different colour.
         if path is not None:
             path_edges = set(zip(path[:-1], path[1:]))
