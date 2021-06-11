@@ -55,7 +55,7 @@ class BaseFACE:
         Returns:
             binary matrix of size len(XA) * len(XB)
         """
-        return (cdist(XA.values, XB.values, metric='euclidean') < self.dist_threshold).astype(int)
+        return (cdist(XA.values, XB.values, metric='euclidean') < self.dist_threshold).astype(bool)
 
     def _weight_function(
             self,

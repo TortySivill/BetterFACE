@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.spatial.distance import pdist, cdist, squareform
 
 class UDM:
     """
@@ -74,40 +73,16 @@ class UDM:
                 # === Add to overall per-feature distance phi. ===
                 self.phi[r] += self.R[r,s] * self.psi[r][s] / self.d
 
-    def __call__(self, XA: np.ndarray, XB: np.ndarray=None, mask: np.ndarray=None, placeholder=np.nan): 
+    def __call__(self, x0, x1): 
         """
-        Pairwise distance between sample sets XA, XB according to the Unified distance Metric.
+        Distance between two points according to the Unified Distance Metric.
 
         Args: 
-            XA:     Array containing NA samples with d features.
-            XB:     Optional second array containing NB samples with d features.
-                        NOTE: If XB is None, implicitly use XB = XA, NB = NA.
-            mask:   Optional NA x NB array indicating whether to complete (True) or skip (False) each pair.
-                        NOTE: If XB is None, calculation is done for pair i,j if mask[i,j] = True *OR* mask[i,j] = True.
+            x0, x1: Two input points. 
 
         Returns:
-            dist:   NA x NB array of distances.
+            dist:   Distance.
             
         """
-        if len(XA.shape) == 1: XA = XA.reshape(1,-1)
-        NA, dA = XA.shape; indicesA = np.array(range(NA)).reshape(-1,1)
-        if XB is None: 
-            NB, dB = NA, dA
-            indices = (indicesA,)
-            func = lambda *args: squareform(pdist(*args))
-        else:       
-            if len(XB.shape) == 1: XB = XB.reshape(1,-1) 
-            NB, dB = XB.shape
-            indices = (indicesA, np.array(range(NB)).reshape(-1,1))
-            func = cdist
-        assert dA == dB == self.d
-        if mask is None: mask = np.ones((NA, NB), dtype=bool)
-        else: assert mask.dtype == bool and mask.shape == (NA, NB)
-        if XB is None: XB = XA; _mask = np.logical_or(mask, mask.T) # Apply or operation to mask if XB is None.
-        else: _mask = mask
-        dist = func(*indices, # Using indices instead of samples allows masking.
-                    lambda i, j: 
-                        np.linalg.norm([self.phi[r][xir,xjr] for r, (xir, xjr) in enumerate(zip(XA[i[0]], XB[j[0]]))])
-                    if _mask[i,j] else placeholder)
-        dist[~mask] = placeholder # Reapply mask to pairs whose mirror has been computed.
-        return np.squeeze(dist)
+        assert len(x0) == len(x1) == self.d
+        return np.linalg.norm([self.phi[r][x0r,x1r] for r, (x0r, x1r) in enumerate(zip(x0, x1))])
