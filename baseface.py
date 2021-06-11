@@ -244,7 +244,8 @@ class BaseFACE:
 
     def show(
         self,
-        path: list = None,
+        paths_and_costs: list = None,
+        prune: bool = True,
         edge_labels = False
     ):
         """Plots all nodes and edges in the graph, optionally highlighting a path.
@@ -256,26 +257,30 @@ class BaseFACE:
 
         """
         plt.figure(figsize=(12, 12))
-        pos = nx.drawing.nx_agraph.graphviz_layout(self.G, prog="neato")
-        nx.draw_networkx(self.G, 
+        if paths_and_costs and prune: # Only show nodes that appear on at least one path.
+            G = self.G.edge_subgraph([(path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1)])
+        else: G = self.G
+        pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="neato")
+        nx.draw_networkx(G, 
             pos=pos,
-            node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in self.G.nodes], # NOTE: Only works with binary classification.    
+            node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in G.nodes], # NOTE: Only works with binary classification.    
             linewidths=2,
             connectionstyle="arc3,rad=0.1"if self.bidirectional else None) # Curved edges if bidirectional.
         if edge_labels:
-            nx.draw_networkx_edge_labels(self.G,
+            nx.draw_networkx_edge_labels(G,
                 pos=pos,
                 label_pos=0.4,
                 font_size=6,
-                edge_labels=dict([((i, j), f"{d['weight']:.2f}") for i, j, d in self.G.edges(data=True)]))
-        # If path specified, highlight it in a different colour.
-        if path is not None:
-            path_edges = set(zip(path[:-1], path[1:]))
-            invalid_edges = path_edges - self.G.edges
-            assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
-            nx.draw_networkx_edges(self.G, 
-                pos=pos, 
-                edgelist=path_edges, 
-                edge_color="r", 
-                width=3,
-                connectionstyle="arc3,rad=0.1"if self.bidirectional else None)
+                edge_labels=dict([((i, j), f"{d['weight']:.2f}") for i, j, d in G.edges(data=True)]))
+        # If paths specified, and haven't already pruned highlight them in a different colour.
+        if (paths_and_costs is not None) and not prune:
+            for path, _ in paths_and_costs:
+                path_edges = set(zip(path[:-1], path[1:]))
+                invalid_edges = path_edges - G.edges
+                assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
+                nx.draw_networkx_edges(G, 
+                    pos=pos, 
+                    edgelist=path_edges, 
+                    edge_color="r", 
+                    width=3,
+                    connectionstyle="arc3,rad=0.1"if self.bidirectional else None)
