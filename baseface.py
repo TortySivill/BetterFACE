@@ -73,7 +73,7 @@ class BaseFACE:
             threshold_matrix: binary matrix of size len(XA) * len(XB)
 
         Returns:
-            weight between points
+            weight between node_collection
         """
         with np.errstate(divide='ignore'):
             return cdist(XA.values, XB.values, metric='euclidean') / threshold_matrix
@@ -103,7 +103,7 @@ class BaseFACE:
     ):
         """Creates nodes and edges with weights.
 
-        If new_point is False then creates nodes and edges (if threshold is met) for all data points.
+        If new_point is False then creates nodes and edges (if threshold is met) for all data node_collection.
         If now_point is True then creates 1 extra node and adds edges to all other nodes.
 
         Args:
@@ -257,30 +257,44 @@ class BaseFACE:
 
         """
         plt.figure(figsize=(12, 12))
-        if paths_and_costs and prune: # Only show nodes that appear on at least one path.
+        if paths_and_costs and prune: 
+            # Only show nodes that appear on at least one path
             G = self.G.edge_subgraph([(path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1)])
         else: G = self.G
+        if paths_and_costs and not prune:
+            # If paths specified, and haven't already pruned, highlight them in a different colour.
+            path_edges = set((path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1))
+            invalid_edges = path_edges - G.edges
+            assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
+        else: path_edges = set()
+        # Set edge width according to inverse weight. 
+        weights = np.array(list(nx.get_edge_attributes(G, "weight").values()))
+        edge_width = 1 * weights.max() / weights
+        # Compute layout.    
         pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="neato")
-        nx.draw_networkx(G, 
+        node_collection = nx.draw_networkx_nodes(G, 
             pos=pos,
             node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in G.nodes], # NOTE: Only works with binary classification.    
-            linewidths=2,
-            connectionstyle="arc3,rad=0.1"if self.bidirectional else None) # Curved edges if bidirectional.
+        )
+        node_collection.set_zorder(3)
+        edge_collection = nx.draw_networkx_edges(G, 
+            pos=pos,
+            edge_color=["r" if e in path_edges else "k" for e in G.edges],
+            width=edge_width,
+            connectionstyle="arc3,rad=0.1"if self.bidirectional else None, # Curved edges if bidirectional.
+        )
+        # Bring path edges to the front.
+        for e, a in zip(G.edges, edge_collection): 
+            if e in path_edges:
+                a.set_zorder(2)
+        nx.draw_networkx_labels(G,
+            pos=pos,
+        )
         if edge_labels:
-            nx.draw_networkx_edge_labels(G,
+            label_collection = nx.draw_networkx_edge_labels(G,
                 pos=pos,
                 label_pos=0.4,
                 font_size=6,
-                edge_labels=dict([((i, j), f"{d['weight']:.2f}") for i, j, d in G.edges(data=True)]))
-        # If paths specified, and haven't already pruned highlight them in a different colour.
-        if (paths_and_costs is not None) and not prune:
-            for path, _ in paths_and_costs:
-                path_edges = set(zip(path[:-1], path[1:]))
-                invalid_edges = path_edges - G.edges
-                assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
-                nx.draw_networkx_edges(G, 
-                    pos=pos, 
-                    edgelist=path_edges, 
-                    edge_color="r", 
-                    width=3,
-                    connectionstyle="arc3,rad=0.1"if self.bidirectional else None)
+                edge_labels={(i, j): f"{d['weight']:.2f}" for i, j, d in G.edges(data=True)},
+            )
+            for l in label_collection.values(): l.set_zorder(4)
