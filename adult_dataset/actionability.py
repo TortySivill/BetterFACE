@@ -15,7 +15,7 @@ rule_base = {
     0: lambda x0, x1: x1[0] < x0[0],
 
     # Age can only increase by one category.
-    1: lambda x0, x1: x1[0] > x0[0], 
+    1: lambda x0, x1: x1[0] - x0[0] > 1, 
 
     # Employment type cannot change.
     2: lambda x0, x1: x1[1] != x0[1],

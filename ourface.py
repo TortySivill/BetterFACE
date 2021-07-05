@@ -113,7 +113,9 @@ class OurFACE(BaseFACE):
             False if any rule is fired, True otherwise (if track: set of fired rules).
         """
         if track: # Assemble a set of all fired rules.
-            fired = {k for k in self.theta if self.rule_base[k]}
+            print(x0)
+            print(x1)
+            fired = {k for k in self.theta if self.rule_base[k](x0, x1)}
             return len(fired) == 0, fired 
         else: # Don't track, and break as soon as *any* rule is fired.
             for k in self.theta: 

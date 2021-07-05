@@ -244,55 +244,80 @@ class BaseFACE:
 
     def show(
         self,
+        subset = None,
         paths_and_costs: list = None,
         prune: bool = True,
-        edge_labels = False
+        node_labels = False,
+        edge_labels = False,
+        width_by_weight = True,
+        node_size = 300,
+        max_edge_width = 3,
+        edge_alpha=1
     ):
-        """Plots all nodes and edges in the graph, optionally highlighting a path.
+        """Plots nodes and edges in the graph, optionally highlighting a path.
 
         Args:
-            path: Optional list of nodes.
+            subset:
+            paths_and_costs: Optional list of paths and associated costs, as output by generate_counterfactual().
+            prune: Whether or not to prune the graph to only contain nodes included in paths_and_costs.
+            node_labels: Whether or not to display node numbers.
+            edge_labels: Whether or not to display edge weights.
+            width_by_weight: 
+            node_size:
+            max_edge_width:
+            edge_alpha
 
         Returns:
 
         """
         plt.figure(figsize=(12, 12))
-        if paths_and_costs and prune: 
-            # Only show nodes that appear on at least one path
-            G = self.G.edge_subgraph([(path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1)])
+        if subset: G = self.G.subgraph(subset)
         else: G = self.G
-        if paths_and_costs and not prune:
-            # If paths specified, and haven't already pruned, highlight them in a different colour.
-            path_edges = set((path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1))
-            invalid_edges = path_edges - G.edges
-            assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
-        else: path_edges = set()
-        # Set edge width according to inverse weight. 
-        weights = np.array(list(nx.get_edge_attributes(G, "weight").values()))
-        edge_width = 1 * weights.max() / weights
+        path_edges = set()
+        if paths_and_costs:
+            if prune:
+                # Only show nodes that appear on at least one path
+                G = self.G.edge_subgraph([(path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1)])
+            else:
+                # Instead of pruning, highlight paths in a different colour.
+                path_edges = set((path[i], path[i+1]) for path, _ in paths_and_costs for i in range(len(path)-1))
+                invalid_edges = path_edges - G.edges
+                assert invalid_edges == set(), f"Invalid edges: {invalid_edges}"
+        if width_by_weight:
+            # Set edge width according to inverse weight. 
+            weights = nx.get_edge_attributes(G, "weight").values()
+            min_weight = min(w for w in weights if w > 0)
+            edge_width = [max_edge_width * min_weight / w if w > 0 else max_edge_width for w in weights]
+        else: edge_width = max_edge_width
         # Compute layout.    
         pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="neato")
         node_collection = nx.draw_networkx_nodes(G, 
             pos=pos,
-            node_color=[["purple", "y"][self.prediction.loc[node].item()] for node in G.nodes], # NOTE: Only works with binary classification.    
+            node_size=node_size,
+            linewidths=0,
+            node_color=[["#a3250b", "#0cad8d"][self.prediction.loc[node].item()] for node in G.nodes], # NOTE: Only works with binary classification.    
         )
         node_collection.set_zorder(3)
         edge_collection = nx.draw_networkx_edges(G, 
             pos=pos,
+            node_size=node_size,
             edge_color=["r" if e in path_edges else "k" for e in G.edges],
             width=edge_width,
+            alpha=edge_alpha,
             connectionstyle="arc3,rad=0.1"if self.bidirectional else None, # Curved edges if bidirectional.
         )
         # Bring path edges to the front.
         for e, a in zip(G.edges, edge_collection): 
             if e in path_edges:
                 a.set_zorder(2)
-        nx.draw_networkx_labels(G,
-            pos=pos,
-        )
+        if node_labels:
+            nx.draw_networkx_labels(G,
+                pos=pos,
+            )
         if edge_labels:
             label_collection = nx.draw_networkx_edge_labels(G,
                 pos=pos,
+                node_size=node_size,
                 label_pos=0.4,
                 font_size=6,
                 edge_labels={(i, j): f"{d['weight']:.2f}" for i, j, d in G.edges(data=True)},
